@@ -182,3 +182,12 @@ test('the edge-piece filter and the big picture', async ({ page }) => {
   await page.getByRole('dialog', { name: 'The whole picture' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+test('suggestions whose pictures are blocked are replaced', async ({ page }) => {
+  await page.route('https://www.artic.edu/**', (route) => route.fulfill({ status: 403, body: 'blocked' }));
+  await page.goto('./');
+  const cards = page.locator('.suggestion:not(.placeholder)');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.filter({ hasText: 'Art Institute' })).toHaveCount(0);
+  await expect(page.locator('.suggestion.broken')).toHaveCount(0);
+});

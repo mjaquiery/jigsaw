@@ -1,7 +1,7 @@
 import { creditLine, GameView } from './board';
-import { h, onTap } from './dom';
+import { h, onTap, wait } from './dom';
 import { ICONS } from './icons';
-import { loadFile, loadRemote, loadSaved, type LoadedPicture } from './images';
+import { loadFile, loadImage, loadRemote, loadSaved, type LoadedPicture } from './images';
 import {
   clampCount,
   createPuzzle,
@@ -108,7 +108,7 @@ export class App {
         refresh.disabled = true;
         grid.replaceChildren(...[0, 1, 2].map(() => h('div', { class: 'suggestion placeholder' })));
         status.textContent = 'Finding pictures…';
-        pictures = await this.pool.next(3);
+        pictures = await this.freshSuggestions(3);
         refresh.disabled = false;
         if (!this.screen?.contains(grid)) return;
         if (pictures.length) this.store.setSuggestions(pictures);
@@ -122,6 +122,22 @@ export class App {
     };
     void fill(false);
     this.show(el);
+  }
+
+  /** New suggestions whose thumbnails are known to load. */
+  private async freshSuggestions(count: number): Promise<PictureInfo[]> {
+    const out: PictureInfo[] = [];
+    for (let round = 0; round < 4 && out.length < count; round++) {
+      const batch = await this.pool.next(count - out.length);
+      if (!batch.length) break;
+      const checked = await Promise.all(
+        batch.map((p) =>
+          Promise.race([loadImage(p.thumb).then(() => true), wait(10_000).then(() => false)]).catch(() => false),
+        ),
+      );
+      batch.forEach((p, i) => (checked[i] ? out.push(p) : this.pool.reportBroken(p)));
+    }
+    return out;
   }
 
   private carryOnCard(current: PuzzleState): HTMLElement {

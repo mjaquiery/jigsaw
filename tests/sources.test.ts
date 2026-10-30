@@ -6,6 +6,7 @@ import {
   parseAic,
   parseCommons,
   parseMetObject,
+  parseMetSearch,
   SuggestionPool,
   type Fetcher,
 } from '../src/sources';
@@ -36,6 +37,9 @@ describe('Wikimedia Commons', () => {
     expect(url.searchParams.get('gsrsearch')).toContain('incategory:Featured_pictures_on_Wikimedia_Commons');
     expect(url.searchParams.get('origin')).toBe('*');
     expect(url.searchParams.get('gsrsort')).toBe('random');
+    expect(new URL(commonsUrl('steam locomotive')).searchParams.get('gsrsearch')).toMatch(
+      /^intitle:steam intitle:locomotive /,
+    );
   });
 
   it('keeps only openly licensed, suitably shaped pictures', () => {
@@ -90,6 +94,13 @@ describe('Art Institute of Chicago', () => {
 });
 
 describe('The Met', () => {
+  it('reads object ids from the paged search', () => {
+    expect(parseMetSearch({ total: 3, objectIDs: [1, 2, 3] })).toEqual([1, 2, 3]);
+    expect(parseMetSearch({ results: [{ objectID: 7 }, { objectID: 8 }] })).toEqual([7, 8]);
+    expect(parseMetSearch({ total: 0, objectIDs: null })).toEqual([]);
+    expect(parseMetSearch(null)).toEqual([]);
+  });
+
   it('accepts only public-domain objects with images', () => {
     expect(parseMetObject({ objectID: 1, isPublicDomain: false, primaryImageSmall: 'x' })).toBeNull();
     expect(parseMetObject({ objectID: 1, isPublicDomain: true, primaryImageSmall: '' })).toBeNull();

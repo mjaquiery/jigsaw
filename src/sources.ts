@@ -17,6 +17,8 @@ const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 const AIC_API = 'https://api.artic.edu/api/v1/artworks/search';
 const AIC_IIIF = 'https://www.artic.edu/iiif/2';
 const MET_API = 'https://collectionapi.metmuseum.org/public/collection/v1';
+/** The original search was retired in October 2026 in favour of this paged one. */
+const MET_SEARCH = 'https://collectionapi.metmuseum.org/public/collection/v1.1/search';
 
 export const PHOTO_THEMES = [
   'garden',
@@ -134,7 +136,10 @@ export function commonsUrl(theme: string, random = true): string {
     generator: 'search',
     gsrnamespace: '6',
     gsrlimit: '20',
-    gsrsearch: `${theme} incategory:Featured_pictures_on_Wikimedia_Commons filetype:bitmap`,
+    gsrsearch: `${theme
+      .split(' ')
+      .map((w) => `intitle:${w}`)
+      .join(' ')} incategory:Featured_pictures_on_Wikimedia_Commons filetype:bitmap`,
     prop: 'imageinfo',
     iiprop: 'url|size|mime|extmetadata',
     iiextmetadatafilter: 'LicenseShortName|Artist|ObjectName',
@@ -260,9 +265,19 @@ interface MetObject {
   classification?: string;
 }
 
-export function metSearchUrl(theme: string, department = pick(MET_DEPARTMENTS)): string {
-  const params = new URLSearchParams({ hasImages: 'true', departmentId: String(department), q: theme });
-  return `${MET_API}/search?${params}`;
+export function metSearchUrl(
+  theme: string,
+  department = pick(MET_DEPARTMENTS),
+  offset = Math.floor(Math.random() * 3) * 40,
+): string {
+  const params = new URLSearchParams({
+    q: theme,
+    hasImages: 'true',
+    departmentId: String(department),
+    limit: '40',
+    offset: String(offset),
+  });
+  return `${MET_SEARCH}?${params}`;
 }
 
 export function parseMetObject(obj: unknown): PictureInfo | null {
@@ -283,13 +298,31 @@ export function parseMetObject(obj: unknown): PictureInfo | null {
   };
 }
 
+/**
+ * Object ids from a search response. Accepts a plain id list or a list of
+ * result objects, so small changes to the new search's format don't break it.
+ */
+export function parseMetSearch(data: unknown): number[] {
+  const d = data as Record<string, unknown> | null;
+  if (!d) return [];
+  for (const key of ['objectIDs', 'objectIds', 'results', 'data', 'objects', 'items', 'hits']) {
+    const list = d[key];
+    if (!Array.isArray(list)) continue;
+    const ids = list
+      .map((item) =>
+        typeof item === 'number' ? item : Number((item as Record<string, unknown>)?.objectID ?? (item as Record<string, unknown>)?.id),
+      )
+      .filter((id) => Number.isInteger(id) && id > 0);
+    if (ids.length) return ids;
+  }
+  return [];
+}
+
 export async function fromMet(theme: string, fetcher: Fetcher, tries = 8): Promise<PictureInfo[]> {
-  const found = (await getJson(fetcher, metSearchUrl(theme))) as { objectIDs?: number[] | null };
-  const ids = (found?.objectIDs ?? []).slice(0, 300);
-  const chosen = new Set<number>();
-  while (chosen.size < Math.min(tries, ids.length)) chosen.add(pick(ids));
+  const ids = parseMetSearch(await getJson(fetcher, metSearchUrl(theme)));
+  const chosen = shuffle(ids).slice(0, tries);
   const objects = await Promise.all(
-    [...chosen].map((id) => getJson(fetcher, `${MET_API}/objects/${id}`).catch(() => null)),
+    chosen.map((id) => getJson(fetcher, `${MET_API}/objects/${id}`).catch(() => null)),
   );
   return objects.map(parseMetObject).filter((p): p is PictureInfo => !!p);
 }
@@ -348,6 +381,11 @@ export class SuggestionPool {
       .finally(() => this.pending.delete(name));
     this.pending.set(name, job);
     return job;
+  }
+
+  /** A suggestion's picture wouldn't load; go easy on that source. */
+  reportBroken(picture: PictureInfo): void {
+    if (picture.source !== 'upload') this.failures[picture.source] += 1;
   }
 
   /** Top up any source that is running low, without waiting. */
