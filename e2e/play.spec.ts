@@ -191,3 +191,42 @@ test('suggestions whose pictures are blocked are replaced', async ({ page }) => 
   await expect(cards.filter({ hasText: 'Art Institute' })).toHaveCount(0);
   await expect(page.locator('.suggestion.broken')).toHaveCount(0);
 });
+
+test('full screen can be switched on and off from the menu and the game', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Full screen' }).click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
+  await page.getByRole('button', { name: 'Leave full screen' }).click();
+  await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(false);
+
+  await chooseAndStart(page, '25 pieces');
+  const tool = page.locator('.toolbar').getByRole('button', { name: 'Full screen' });
+  await tool.click();
+  await expect(tool).toHaveAttribute('aria-pressed', 'true');
+  await tool.click();
+  await expect(tool).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('on an iPad, the install button explains Add to Home Screen', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Install as an app' }).click();
+  const help = page.getByRole('dialog', { name: 'Install as an app' });
+  await expect(help).toContainText('Add to Home Screen');
+  await help.getByRole('button', { name: 'OK' }).click();
+  await expect(help).toHaveCount(0);
+});
+
+test('where the browser offers to install, the install button asks it', async ({ page }) => {
+  await page.goto('./');
+  await page.evaluate(() => {
+    const e = new Event('beforeinstallprompt') as Event & { prompt(): Promise<void>; userChoice: Promise<unknown> };
+    e.prompt = async () => {
+      (window as unknown as { prompted: boolean }).prompted = true;
+    };
+    e.userChoice = Promise.resolve({ outcome: 'accepted' });
+    window.dispatchEvent(e);
+  });
+  await page.getByRole('button', { name: 'Install as an app' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { prompted?: boolean }).prompted)).toBe(true);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});

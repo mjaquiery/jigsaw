@@ -1,5 +1,6 @@
 import './styles.css';
 import { App } from './app';
+import { watchInstall } from './display';
 
 // Stop pinch-zoom, double-tap zoom and page bounce on iPad.
 for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
@@ -15,6 +16,7 @@ document.addEventListener(
 );
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
+watchInstall();
 new App(document.getElementById('app')!).start();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

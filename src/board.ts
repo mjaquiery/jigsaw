@@ -1,3 +1,4 @@
+import { canFullscreen, isFullscreen, onFullscreenChange, toggleFullscreen } from './display';
 import { h, onTap, reducedMotion } from './dom';
 import { ICONS } from './icons';
 import {
@@ -84,6 +85,7 @@ export class GameView {
   private drag: { pointerId: number; group: number; last: Point; frame: number } | null = null;
   private alive = true;
   private done = false;
+  private unwatchFullscreen = () => {};
 
   constructor(
     private readonly state: PuzzleState,
@@ -131,6 +133,17 @@ export class GameView {
     muteBtn.setAttribute('aria-pressed', String(!settings.muted));
     this.progress = h('div', { class: 'progress', 'aria-live': 'polite' });
     bar.append(homeBtn, this.progress, h('div', { class: 'toolbar-spacer' }), bigBtn, this.guideBtn, this.edgesBtn, muteBtn);
+    if (canFullscreen()) {
+      // Browsers only allow full screen from a click, not a pointerdown.
+      const fullBtn = this.toolButton(ICONS.fullscreen, 'Full screen', () => void toggleFullscreen(), 'click');
+      const paint = () => {
+        fullBtn.querySelector('.tool-icon')!.innerHTML = isFullscreen() ? ICONS.exitFullscreen : ICONS.fullscreen;
+        fullBtn.setAttribute('aria-pressed', String(isFullscreen()));
+      };
+      paint();
+      this.unwatchFullscreen = onFullscreenChange(paint);
+      bar.append(fullBtn);
+    }
 
     this.play = h('div', { class: 'play' });
     this.frame = h('div', { class: 'frame' });
@@ -164,15 +177,18 @@ export class GameView {
   destroy(): void {
     this.alive = false;
     this.drag = null;
+    this.unwatchFullscreen();
   }
 
-  private toolButton(icon: string, label: string, fn: () => void): HTMLButtonElement {
+  private toolButton(icon: string, label: string, fn: () => void, on: 'tap' | 'click' = 'tap'): HTMLButtonElement {
     const btn = h('button', { class: 'tool', 'aria-label': label });
     btn.innerHTML = `<span class="tool-icon">${icon}</span><span class="tool-label">${label}</span>`;
-    onTap(btn, () => {
+    const run = () => {
       this.sound.tap();
       fn();
-    });
+    };
+    if (on === 'tap') onTap(btn, run);
+    else btn.addEventListener('click', run);
     return btn;
   }
 

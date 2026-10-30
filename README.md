@@ -20,6 +20,9 @@ Safari. Large buttons, big text, forgiving touch and no time pressure.
   - **Faint picture** shows a faint copy of the picture on the board.
   - **Edge pieces** shows only edge pieces in the tray.
   - **Sound** turns the gentle clicks on or off.
+  - **Full screen** hides the browser's bars (also on the menu). It's hidden
+    when the app is installed, which is already full screen, and on browsers
+    that can't do it, such as Safari on iPhone.
 
 The puzzle in progress, its picture and the settings are kept in the
 browser's local storage, so the app reopens where you left off, even after
@@ -27,7 +30,9 @@ a reload or a restart. The **Pictures** button goes back to the menu, where
 **Carry on with your puzzle** picks it up again.
 
 To install on an iPad: open the site in Safari → Share → **Add to Home
-Screen**. This works better than a Safari tab: it opens full screen, works
+Screen**. The menu's **Install as an app** button explains these steps on
+iPad and iPhone, or shows the browser's own install dialog where there is one
+(Chrome, Edge). This works better than a Safari tab: it opens full screen, works
 offline once loaded, and Safari won't clear the saved puzzle after a week of
 not being used, which it does for websites in ordinary tabs.
 

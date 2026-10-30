@@ -200,6 +200,45 @@ svg {
 
 /* ---------- home ---------- */
 
+.head-btn {
+  min-height: 56px;
+  font-size: 18px;
+}
+
+.install-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+  font-size: 21px;
+}
+
+.install-steps li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.step-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 2px solid #d5c9b1;
+  color: #2f7cf6;
+}
+
+.step-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
 .carry-on {
   display: flex;
   align-items: center;

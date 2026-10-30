@@ -1,4 +1,13 @@
 import { creditLine, GameView } from './board';
+import {
+  canFullscreen,
+  installMode,
+  isFullscreen,
+  onFullscreenChange,
+  onInstallChange,
+  promptInstall,
+  toggleFullscreen,
+} from './display';
 import { h, onTap, wait } from './dom';
 import { ICONS } from './icons';
 import { loadFile, loadImage, loadRemote, loadSaved, type LoadedPicture } from './images';
@@ -58,14 +67,84 @@ export class App {
     }
   }
 
-  private button(cls: string, label: string, icon: string | null, fn: () => void): HTMLButtonElement {
+  /** `on: 'click'` for actions browsers only allow from a click (full screen, install), not a pointerdown. */
+  private button(
+    cls: string,
+    label: string,
+    icon: string | null,
+    fn: () => void,
+    on: 'tap' | 'click' = 'tap',
+  ): HTMLButtonElement {
     const btn = h('button', { class: cls });
     btn.innerHTML = `${icon ?? ''}<span>${escapeHtml(label)}</span>`;
-    onTap(btn, () => {
+    const run = () => {
       this.sound.tap();
       fn();
-    });
+    };
+    if (on === 'tap') onTap(btn, run);
+    else btn.addEventListener('click', run);
     return btn;
+  }
+
+  /** Runs `fn` on each change until the element has left the page. */
+  private whileShown(el: HTMLElement, watch: (fn: () => void) => () => void, fn: () => void): void {
+    const stop = watch(() => {
+      if (el.isConnected) fn();
+      else stop();
+    });
+  }
+
+  private fullscreenButton(): HTMLButtonElement | null {
+    if (!canFullscreen()) return null;
+    const btn = this.button('pill head-btn', 'Full screen', ICONS.fullscreen, () => void toggleFullscreen(), 'click');
+    const paint = () => {
+      const on = isFullscreen();
+      btn.innerHTML = `${on ? ICONS.exitFullscreen : ICONS.fullscreen}<span>${on ? 'Leave full screen' : 'Full screen'}</span>`;
+    };
+    paint();
+    this.whileShown(btn, onFullscreenChange, paint);
+    return btn;
+  }
+
+  private installButton(): HTMLButtonElement {
+    const btn = this.button(
+      'pill',
+      'Install as an app',
+      ICONS.install,
+      () => {
+        if (installMode() === 'prompt') void promptInstall();
+        else this.showInstallHelp();
+      },
+      'click',
+    );
+    const paint = () => (btn.hidden = installMode() === null);
+    paint();
+    this.whileShown(btn, onInstallChange, paint);
+    return btn;
+  }
+
+  private showInstallHelp(): void {
+    const overlay = h('div', { class: 'overlay install-help', role: 'dialog', 'aria-label': 'Install as an app' });
+    const card = h('div', { class: 'win-card' });
+    const step = (icon: string, text: string) => {
+      const li = h('li', {}, h('span', { class: 'step-icon' }), text);
+      li.firstElementChild!.innerHTML = icon;
+      return li;
+    };
+    const ok = this.button('big-btn primary', 'OK', null, () => overlay.remove());
+    card.append(
+      h('h2', {}, 'Install as an app'),
+      h('p', {}, 'Jigsaw then opens from its own icon, fills the whole screen and works without the internet.'),
+      h(
+        'ol',
+        { class: 'install-steps' },
+        step(ICONS.share, 'Tap the Share button in Safari’s toolbar.'),
+        step(ICONS.addBox, 'Choose “Add to Home Screen”, then tap Add.'),
+      ),
+      h('div', { class: 'win-buttons' }, ok),
+    );
+    overlay.append(card);
+    this.screen?.append(overlay);
   }
 
   private showLoading(message: string): void {
@@ -80,7 +159,10 @@ export class App {
     this.game = null;
     const el = h('div', { class: 'page home' });
     const body = h('div', { class: 'page-body' });
-    el.append(h('header', { class: 'page-head' }, h('h1', {}, 'Jigsaw')), body);
+    const head = h('header', { class: 'page-head' }, h('h1', {}, 'Jigsaw'), h('div', { class: 'toolbar-spacer' }));
+    const fullBtn = this.fullscreenButton();
+    if (fullBtn) head.append(fullBtn);
+    el.append(head, body);
 
     if (notice) body.append(h('p', { class: 'notice' }, notice));
 
@@ -100,7 +182,7 @@ export class App {
       fileInput.value = '';
       if (file) void this.pickFile(file);
     });
-    body.append(status, h('div', { class: 'home-actions' }, refresh, upload, fileInput));
+    body.append(status, h('div', { class: 'home-actions' }, refresh, upload, this.installButton(), fileInput));
 
     const fill = async (fresh: boolean) => {
       let pictures = fresh ? [] : this.store.data.suggestions;

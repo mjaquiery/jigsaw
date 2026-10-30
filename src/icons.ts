@@ -17,6 +17,11 @@ export const ICONS = {
   soundOff: svg('<path d="M8 18h7l10-8v28l-10-8H8z"/><path d="m32 19 10 10M42 19 32 29"/>'),
   minus: svg('<path d="M12 24h24"/>'),
   plus: svg('<path d="M12 24h24M24 12v24"/>'),
+  fullscreen: svg('<path d="M8 18V8h10M30 8h10v10M40 30v10H30M18 40H8V30"/>'),
+  exitFullscreen: svg('<path d="M18 8v10H8M40 18H30V8M30 40V30h10M8 30h10v10"/>'),
+  install: svg('<path d="M24 6v24M14 20l10 10 10-10"/><path d="M8 32v8h32v-8"/>'),
+  share: svg('<path d="M24 6v24M15 15l9-9 9 9"/><path d="M16 22h-6v20h28V22h-6"/>'),
+  addBox: svg('<rect x="7" y="7" width="34" height="34" rx="6"/><path d="M24 15v18M15 24h18"/>'),
   close: svg('<path d="M13 13l22 22M35 13 13 35"/>'),
   play: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 10v28l22-14z" fill="currentColor" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>',
 };
