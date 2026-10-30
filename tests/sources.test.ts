@@ -104,6 +104,7 @@ describe('The Met', () => {
   it('accepts only public-domain objects with images', () => {
     expect(parseMetObject({ objectID: 1, isPublicDomain: false, primaryImageSmall: 'x' })).toBeNull();
     expect(parseMetObject({ objectID: 1, isPublicDomain: true, primaryImageSmall: '' })).toBeNull();
+    expect(parseMetObject({ objectID: 2, isPublicDomain: true, primaryImageSmall: 'x', classification: 'Ceramics' })).toBeNull();
     expect(
       parseMetObject({ objectID: 7, isPublicDomain: true, primaryImageSmall: 'https://images.metmuseum.org/a.jpg', title: 'Wheat Field', artistDisplayName: 'Vincent van Gogh' }),
     ).toMatchObject({ id: 'met:7', title: 'Wheat Field', artist: 'Vincent van Gogh' });

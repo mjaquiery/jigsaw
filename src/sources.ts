@@ -250,7 +250,7 @@ export async function fromAic(theme: string, fetcher: Fetcher): Promise<PictureI
 
 // ---------- The Met ----------
 
-/** European Paintings, Asian Art and The American Wing. */
+/** European Paintings, Asian Art and American art. */
 const MET_DEPARTMENTS = [11, 6, 1];
 
 interface MetObject {
@@ -283,6 +283,8 @@ export function metSearchUrl(
 export function parseMetObject(obj: unknown): PictureInfo | null {
   const o = obj as MetObject;
   if (!o?.objectID || !o.isPublicDomain || !o.primaryImageSmall) return null;
+  // Departments mix paintings with ceramics and furniture; keep the paintings.
+  if (o.classification && !/paint/i.test(o.classification)) return null;
   const title = o.title?.trim() || 'Untitled';
   if (!welcome(title)) return null;
   return {

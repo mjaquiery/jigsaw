@@ -47,9 +47,11 @@ titles mention unwelcome subjects, or if they are too tall or too wide for
 a screen. Credits (title, artist, licence and source) appear when you
 choose a picture and in **Big picture**.
 
-A source that fails or is unreachable is skipped quietly. If none can be
-reached, for example when offline, the app says so and offers your own
-photos instead.
+A source that fails or is unreachable is skipped quietly, and a suggestion
+is only shown once its picture has loaded. If none can be reached, for
+example when offline, the app says so and offers your own photos instead.
+(The Art Institute's image server sometimes turns visitors away with a bot
+check; the other sources then fill in.)
 
 The **Check picture sources** workflow calls the real services each week
 (and on demand) to catch any changes to their APIs; run the same check
