@@ -1,0 +1,16 @@
+{
+  "name": "Jigsaw",
+  "short_name": "Jigsaw",
+  "description": "A calm, easy-to-handle jigsaw puzzle.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2c4a43",
+  "theme_color": "#2c4a43",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
