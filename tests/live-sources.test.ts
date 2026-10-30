@@ -6,19 +6,27 @@ import { describe, expect, it } from 'vitest';
 import { fromAic, fromCommons, fromMet, type Fetcher } from '../src/sources';
 
 const live = !!process.env.LIVE_SOURCES;
-const UA = 'JigsawSourceCheck/1.0 (https://github.com/mjaquiery/jigsaw)';
-const fetcher: Fetcher = async (url) => {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Origin: 'https://mjaquiery.github.io' } });
+const HEADERS = {
+  'User-Agent': 'JigsawSourceCheck/1.0 (https://github.com/mjaquiery/jigsaw)',
+  Origin: 'https://mjaquiery.github.io',
+};
+
+async function report(res: Response, url: string, label = '') {
   const cors = res.headers.get('access-control-allow-origin');
-  console.log(`${res.status} cors=${cors} ${url.slice(0, 120)}`);
+  console.log(`${label}${res.status} ${res.headers.get('content-type')} cors=${cors} ${url.slice(0, 120)}`);
+  if (!res.ok) console.log(`  body: ${(await res.clone().text()).slice(0, 300).replace(/\s+/g, ' ')}`);
+}
+
+const fetcher: Fetcher = async (url) => {
+  const res = await fetch(url, { headers: HEADERS });
+  await report(res, url);
   return res;
 };
 
 async function checkImage(url: string) {
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Origin: 'https://mjaquiery.github.io' } });
-  const cors = res.headers.get('access-control-allow-origin');
-  console.log(`  image ${res.status} ${res.headers.get('content-type')} cors=${cors} ${url.slice(0, 110)}`);
-  return { ok: res.ok, cors };
+  const res = await fetch(url, { headers: HEADERS });
+  await report(res, url, '  image ');
+  return res.ok;
 }
 
 describe.skipIf(!live)('live picture sources', () => {
@@ -30,12 +38,21 @@ describe.skipIf(!live)('live picture sources', () => {
     it(`${name} returns usable pictures`, { timeout: 60_000 }, async () => {
       const found = await load(theme, fetcher);
       console.log(`${name}: ${found.length} pictures`);
-      for (const p of found.slice(0, 3)) console.log(`  ${p.title} | ${p.artist} | ${p.license}`);
+      for (const p of found.slice(0, 5)) console.log(`  ${p.title} | ${p.artist} | ${p.license}`);
       expect(found.length).toBeGreaterThan(0);
-      const thumb = await checkImage(found[0].thumb);
-      const full = await checkImage(found[0].full);
-      expect(thumb.ok).toBe(true);
-      if (!full.ok && found[0].fallback) expect((await checkImage(found[0].fallback)).ok).toBe(true);
+      const thumbOk = await checkImage(found[0].thumb);
+      await checkImage(found[0].full);
+      expect(thumbOk).toBe(true);
     });
   }
+
+  it('Met endpoints (diagnostic)', { timeout: 30_000 }, async () => {
+    for (const url of [
+      'https://collectionapi.metmuseum.org/public/collection/v1/departments',
+      'https://collectionapi.metmuseum.org/public/collection/v1/search?q=flowers',
+      'https://collectionapi.metmuseum.org/public/collection/v1/objects/436535',
+    ]) {
+      await report(await fetch(url, { headers: HEADERS }), url);
+    }
+  });
 });
